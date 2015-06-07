@@ -3,7 +3,7 @@
 # ##  https://github.com/NetASM/NetASM-python
 # ##
 # ##  File:
-# ##        pass_through.py
+# ##        pass_through_2ports.py
 # ##
 # ##  Project:
 # ##        NetASM: A Network Assembly Language for Programmable Dataplanes
@@ -31,25 +31,42 @@
 # ##        License along with the NetASM source package.  If not, see
 # ##        http://www.gnu.org/licenses/.
 
-from pox.core import core
-from pox.lib.util import dpidToStr
+__author__ = 'shahbaz'
 
-from netasm.back_ends.soft_switch.api import OutMessage
-
-
-log = core.getLogger()
+from netasm.netasm.core import *
 
 
-def _handle_ConnectionUp(event):
-    msg = OutMessage()
+def main():
+    decls = Decls(TableDecls())
 
-    msg.set_policy("netasm.examples.netasm.standalone.pass_through")
-    event.connection.send(msg)
+    code = I.Code(
+        Fields(),
+        I.Instructions(
+            I.BR(
+                O.Field(Field('inport_bitmap')),
+                Op.Eq,
+                O.Value(Value(2, Size(2))),
+                Label('LBL_1')
+            ),
+            I.LD(
+                O.Field(Field('outport_bitmap')),
+                O.Value(Value(2, Size(2)))
+            ),
+            I.JMP(
+                Label('LBL_HLT')
+            ),
+            I.LBL(
+                Label('LBL_1')
+            ),
+            I.LD(
+                O.Field(Field('outport_bitmap')),
+                O.Value(Value(1, Size(1)))
+            ),
+            I.LBL(
+                Label('LBL_HLT')
+            ),
+            I.HLT()
+        )
+    )
 
-    log.info("netasm.examples.netasm.standalone.pass_through for %s", dpidToStr(event.dpid))
-
-
-def launch():
-    core.openflow.addListenerByName("ConnectionUp", _handle_ConnectionUp)
-
-    log.info("netasm.examples.netasm.standalone.pass_through running.")
+    return Policy(decls, code)

@@ -36,7 +36,7 @@ __author__ = 'shahbaz'
 from netasm.netasm.core import *
 
 
-# NOTE: We are not considering loop avoidance and host migration in this example
+# NOTE: We are not considering loop avoidance but we do take into account host migration in this example
 
 
 def main():
@@ -126,96 +126,116 @@ def main():
             I.ADD(O.Field(Field('index')),
                   Size(16)),
 
-            # Lookup in the match table and store the matched index
-            I.LKt(O.Field(Field('index')),
-                  TableId('eth_match_table'),
-                  O.Operands_(
-                      O.Field(Field('eth_dst')))),
-            I.BR(O.Field(Field('index')),
-                 Op.Neq,
-                 O.Value(Value(-1, Size(16))),
-                 Label('LBL_LKP_0')),
+            I.ATM(
+                I.Code(
+                    Fields(Field('index'), Field('eth_dst'), Field('eth_src')),
+                    I.Instructions(
+                        # Lookup in the match table and store the matched index
+                        I.LKt(O.Field(Field('index')),
+                              TableId('eth_match_table'),
+                              O.Operands_(
+                                  O.Field(Field('eth_dst')))),
+                        I.BR(O.Field(Field('index')),
+                             Op.Neq,
+                             O.Value(Value(-1, Size(16))),
+                             Label('LBL_LKP_0')),
 
-            # Case: there is no match in the match table
-            # Broadcast the packet
-            I.OP(
-                O.Field(Field('outport_bitmap')),
-                O.Field(Field('inport_bitmap')),
-                Op.Xor,
-                O.Value(Value(PORT_COUNT_BITMAP, Size(16))),
+                        # Case: there is no match in the match table
+                        # Broadcast the packet
+                        I.OP(
+                            O.Field(Field('outport_bitmap')),
+                            O.Field(Field('inport_bitmap')),
+                            Op.Xor,
+                            O.Value(Value(PORT_COUNT_BITMAP, Size(16))),
+                        ),
+                        I.JMP(Label('LBL_LRN')),
+
+                        # Case: there is a match in the l2 match table
+                        I.LBL(Label('LBL_LKP_0')),
+
+                        # Load output port from the parameters table
+                        I.LDt(
+                            O.Operands__(
+                                O.Field(Field('outport_bitmap'))),
+                            TableId('eth_params_table'),
+                            O.Field(Field('index'))),
+
+                        #######################
+                        ## Learn MAC address ##
+                        #######################
+                        I.LBL(Label('LBL_LRN')),
+
+                        # Lookup in the match table and store the matched index
+                        I.LKt(O.Field(Field('index')),
+                              TableId('eth_match_table'),
+                              O.Operands_(
+                                  O.Field(Field('eth_src')))),
+                        I.BR(O.Field(Field('index')),
+                             Op.Neq,
+                             O.Value(Value(-1, Size(16))),
+                             Label('LBL_LRN_0')),
+
+                        # Case: there is no match in the match table
+                        # Read the running index from the index table
+                        I.LDt(
+                            O.Operands__(
+                                O.Field(Field('index'))),
+                            TableId('index_table'),
+                            O.Value(Value(0, Size(1)))),
+
+                        # Store eth_src in the eth_match_table
+                        I.STt(TableId('eth_match_table'),
+                              O.Field(Field('index')),
+                              O.OperandsMasks_(
+                                  (O.Field(Field('eth_src')), Mask(0xFFFFFFFFFFFF)))),
+
+                        # Store inport_bitmap in the eth_params_table
+                        I.STt(TableId('eth_params_table'),
+                              O.Field(Field('index')),
+                              O.Operands_(
+                                  O.Field(Field('inport_bitmap')))),
+
+                        # Increment the running index
+                        I.OP(
+                            O.Field(Field('index')),
+                            O.Field(Field('index')),
+                            Op.Add,
+                            O.Value(Value(1, Size(16))),
+                        ),
+
+                        # Check if the index is less than the MAC_TABLE_SIZE
+                        I.BR(O.Field(Field('index')),
+                             Op.Lt,
+                             O.Value(Value(MAC_TABLE_SIZE, Size(16))),
+                             Label('LBL_LRN_1')),
+
+                        # Reset the running index
+                        I.LD(O.Field(Field('index')),
+                             O.Value(Value(0, Size(16)))),
+
+                        # Store the running index back in the table
+                        I.LBL(Label('LBL_LRN_1')),
+
+                        I.STt(TableId('index_table'),
+                              O.Value(Value(0, Size(1))),
+                              O.Operands_(
+                                  O.Field(Field('index')))),
+                        I.JMP(Label('LBL_HLT')),
+
+                        # Store the current inport_bitmap in the eth_params_table
+                        I.LBL(Label('LBL_LRN_0')),
+
+                        I.STt(TableId('eth_params_table'),
+                              O.Field(Field('index')),
+                              O.Operands_(
+                                  O.Field(Field('inport_bitmap')))),
+
+                        # Halt
+                        I.LBL(Label('LBL_HLT')),
+                        I.HLT()
+                    )
+                )
             ),
-            I.JMP(Label('LBL_LRN')),
-
-            # Case: there is a match in the l2 match table
-            I.LBL(Label('LBL_LKP_0')),
-
-            # Load output port from the parameters table
-            I.LDt(
-                O.Operands__(
-                    O.Field(Field('outport_bitmap'))),
-                TableId('eth_params_table'),
-                O.Field(Field('index'))),
-
-            #######################
-            ## Learn MAC address ##
-            #######################
-            I.LBL(Label('LBL_LRN')),
-
-            # Lookup in the match table and store the matched index
-            I.LKt(O.Field(Field('index')),
-                  TableId('eth_match_table'),
-                  O.Operands_(
-                      O.Field(Field('eth_src')))),
-            I.BR(O.Field(Field('index')),
-                 Op.Neq,
-                 O.Value(Value(-1, Size(16))),
-                 Label('LBL_HLT')),
-
-            # Case: there is no match in the match table
-            # Read the running index from the index table
-            I.LDt(
-                O.Operands__(
-                    O.Field(Field('index'))),
-                TableId('index_table'),
-                O.Value(Value(0, Size(1)))),
-
-            # Store eth_src in the eth_match_table
-            I.STt(TableId('eth_match_table'),
-                  O.Field(Field('index')),
-                  O.OperandsMasks_(
-                      (O.Field(Field('eth_src')), Mask(0xFFFFFFFFFFFF)))),
-
-            # Store inport_bitmap in the eth_params_table
-            I.STt(TableId('eth_params_table'),
-                  O.Field(Field('index')),
-                  O.Operands_(
-                      O.Field(Field('inport_bitmap')))),
-
-            # Increment the running index
-            I.OP(
-                O.Field(Field('index')),
-                O.Field(Field('index')),
-                Op.Add,
-                O.Value(Value(1, Size(16))),
-            ),
-
-            # Check if the index is less than the MAC_TABLE_SIZE
-            I.BR(O.Field(Field('index')),
-                 Op.Lt,
-                 O.Value(Value(MAC_TABLE_SIZE, Size(16))),
-                 Label('LBL_LRN_0')),
-
-            # Reset the running index
-            I.LD(O.Field(Field('index')),
-                 O.Value(Value(0, Size(16)))),
-
-            # Store the running index back in the table
-            I.LBL(Label('LBL_LRN_0')),
-
-            I.STt(TableId('index_table'),
-                  O.Value(Value(0, Size(1))),
-                  O.Operands_(
-                      O.Field(Field('index')))),
 
             ##########
             ## Halt ##
