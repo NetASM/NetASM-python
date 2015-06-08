@@ -44,6 +44,10 @@ from netasm.netasm.core.analyses import reaching_definitions as rd
 from netasm.netasm.core.utilities.profile import time_usage
 
 
+def is_reserved_or_argument_field(field, argument_fields):
+    return is_reserved_field(field) or (field in argument_fields)
+
+
 def get_field_size(reach_def_in, field):
     for instruction in reach_def_in:
         if isinstance(instruction, I.ADD):
@@ -51,10 +55,10 @@ def get_field_size(reach_def_in, field):
                 return instruction.size
 
 
-def get_header_size(reach_in, reach_def_in):
+def get_header_size(reach_in, reach_def_in, argument_fields):
     area = 0
     for field in reach_in:
-        if not is_reserved_field(field):
+        if not is_reserved_or_argument_field(field, argument_fields):
             area += get_field_size(reach_def_in, field)
     return area
 
@@ -164,6 +168,7 @@ def cost_Decls(decls, state):
 
 
 def cost_Code(code, state):
+    argument_fields = code.argument_fields
     instructions = code.instructions
 
     ''' Generate control flow graph '''
@@ -182,15 +187,18 @@ def cost_Code(code, state):
         for instruction in node.basic_block:
             if isinstance(instruction, I.ID):
                 state.area += get_header_size(reach_ins[instruction],
-                                              reach_def_ins[instruction])
+                                              reach_def_ins[instruction],
+                                              argument_fields)
                 state.latency += 1
             elif isinstance(instruction, I.DRP):
                 state.area += get_header_size(reach_ins[instruction],
-                                              reach_def_ins[instruction])
+                                              reach_def_ins[instruction],
+                                              argument_fields)
                 state.latency += 1
             elif isinstance(instruction, I.CTR):
                 state.area += get_header_size(reach_ins[instruction],
-                                              reach_def_ins[instruction])
+                                              reach_def_ins[instruction],
+                                              argument_fields)
                 state.latency += 1
             elif isinstance(instruction, I.ADD):
                 pass
@@ -199,40 +207,49 @@ def cost_Code(code, state):
             elif isinstance(instruction, I.LD):
                 if isinstance(instruction.source, O.Value) or isinstance(instruction.source, O.Field):
                     state.area += get_header_size(reach_ins[instruction],
-                                                  reach_def_ins[instruction])
+                                                  reach_def_ins[instruction],
+                                                  argument_fields)
                     state.latency += 1
                 elif isinstance(instruction.source, O.Location):
                     state.area += get_header_size(reach_ins[instruction],
-                                                  reach_def_ins[instruction]) * 2
+                                                  reach_def_ins[instruction],
+                                                  argument_fields) * 2
                     state.latency += 2
             elif isinstance(instruction, I.ST):
                 state.area += get_header_size(reach_ins[instruction],
-                                              reach_def_ins[instruction])
+                                              reach_def_ins[instruction],
+                                              argument_fields)
                 state.latency += 1
             elif isinstance(instruction, I.OP):
                 if not (instruction.operator == Op.Mul or instruction.operator == Op.Div):
                     state.area += get_header_size(reach_ins[instruction],
-                                                  reach_def_ins[instruction])
+                                                  reach_def_ins[instruction],
+                                                  argument_fields)
                     state.latency += 1
                 else:
                     state.area += get_header_size(reach_ins[instruction],
-                                                  reach_def_ins[instruction]) * 2
+                                                  reach_def_ins[instruction],
+                                                  argument_fields) * 2
                     state.latency += 2
             elif isinstance(instruction, I.PUSH):
                 state.area += get_header_size(reach_ins[instruction],
-                                              reach_def_ins[instruction])
+                                              reach_def_ins[instruction],
+                                              argument_fields)
                 state.latency += 1
             elif isinstance(instruction, I.POP):
                 state.area += get_header_size(reach_ins[instruction],
-                                              reach_def_ins[instruction])
+                                              reach_def_ins[instruction],
+                                              argument_fields)
                 state.latency += 1
             elif isinstance(instruction, I.BR):
                 state.area += get_header_size(reach_ins[instruction],
-                                              reach_def_ins[instruction])
+                                              reach_def_ins[instruction],
+                                              argument_fields)
                 state.latency += 1
             elif isinstance(instruction, I.JMP):
                 state.area += get_header_size(reach_ins[instruction],
-                                              reach_def_ins[instruction])
+                                              reach_def_ins[instruction],
+                                              argument_fields)
                 state.latency += 1
             elif isinstance(instruction, I.LBL):
                 pass
@@ -241,7 +258,8 @@ def cost_Code(code, state):
 
                 if table_type == syntax.TableTypeCollection.RAM:
                     state.area += get_header_size(reach_ins[instruction],
-                                                  reach_def_ins[instruction]) * 3
+                                                  reach_def_ins[instruction],
+                                                  argument_fields) * 3
                     state.latency += 3
                 else:
                     raise RuntimeError("invalid table type (%s)." % table_type)
@@ -254,24 +272,28 @@ def cost_Code(code, state):
 
                 if table_type == syntax.TableTypeCollection.RAM:
                     state.area += get_header_size(reach_ins[instruction],
-                                                  reach_def_ins[instruction]) * 3
+                                                  reach_def_ins[instruction],
+                                                  argument_fields) * 3
                     state.latency += 3
                 # elif table_type == syntax.TableTypeCollection.HSH:
                 # latency += 2
                 elif table_type == syntax.TableTypeCollection.CAM:
                     state.area += get_header_size(reach_ins[instruction],
-                                                  reach_def_ins[instruction]) * 4
+                                                  reach_def_ins[instruction],
+                                                  argument_fields) * 4
                     state.latency += 4
                 else:
                     raise RuntimeError("invalid table type (%s)." % table_type)
             elif isinstance(instruction, I.INCt):
                 _, _, table_type = state.tables[instruction.table_id]
                 state.area += get_header_size(reach_ins[instruction],
-                                              reach_def_ins[instruction])
+                                              reach_def_ins[instruction],
+                                              argument_fields)
 
                 if table_type == syntax.TableTypeCollection.RAM:
                     state.area += get_header_size(reach_ins[instruction],
-                                                  reach_def_ins[instruction]) * 3
+                                                  reach_def_ins[instruction],
+                                                  argument_fields) * 3
                     state.latency += 3
                 else:
                     raise RuntimeError("invalid table type (%s)." % table_type)
@@ -280,23 +302,27 @@ def cost_Code(code, state):
 
                 if table_type == syntax.TableTypeCollection.RAM:
                     state.area += get_header_size(reach_ins[instruction],
-                                                  reach_def_ins[instruction]) * 3
+                                                  reach_def_ins[instruction],
+                                                  argument_fields) * 3
                     state.latency += 3
                 # elif table_type == syntax.TableTypeCollection.HSH:
                 # latency += 2
                 elif table_type == syntax.TableTypeCollection.CAM:
                     state.area += get_header_size(reach_ins[instruction],
-                                                  reach_def_ins[instruction]) * 4
+                                                  reach_def_ins[instruction],
+                                                  argument_fields) * 4
                     state.latency += 4
                 else:
                     raise RuntimeError("invalid table type (%s)." % table_type)
             elif isinstance(instruction, I.CRC):
                 state.area += get_header_size(reach_ins[instruction],
-                                              reach_def_ins[instruction])
+                                              reach_def_ins[instruction],
+                                              argument_fields)
                 state.latency += 1
             elif isinstance(instruction, I.HSH):
                 state.area += get_header_size(reach_ins[instruction],
-                                              reach_def_ins[instruction])
+                                              reach_def_ins[instruction],
+                                              argument_fields)
                 state.latency += 1
             elif isinstance(instruction, I.CNC):
                 for code in instruction.codes:

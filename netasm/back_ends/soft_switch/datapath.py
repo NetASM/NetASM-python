@@ -439,21 +439,21 @@ class ProgSwitch(ExpireMixin, SoftwareSwitchBase):
                 policy = main()
                 if isinstance(policy, Policy):
                     try:
-                        validate.type_check.type_check_Policy__time_usage(policy, _MAX_PORTS)
+                        validate.type_check.type_check_Policy(policy, _MAX_PORTS)
                         print "Policy (type check): passed!"
-
-                        area, latency = cost.cost_Policy__time_usage(policy)
-                        print "Original policy (cost): Area=%s, Latency=%s" % (area, latency)
-
-                        policy = optimize.optimize_Policy(policy)
-                        area, latency = cost.cost_Policy__time_usage(policy)
-                        print "Optimized policy (cost): Area=%s, Latency=%s" % (area, latency)
-
-                        self.policy = execute.Execute(policy)
-                        self.policy.start()
                     except Exception, e:
                         print "Policy (type check): failed... " + e.message
                         self.policy = None
+
+                    area, latency = cost.cost_Policy(policy)
+                    print "policy (original cost): Area=%s, Latency=%s" % (area, latency)
+
+                    policy = optimize.optimize_Policy(policy)
+                    area, latency = cost.cost_Policy(policy)
+                    print "Policy (optimize cost): Area=%s, Latency=%s" % (area, latency)
+
+                    self.policy = execute.Execute(policy)
+                    self.policy.start()
                 else:
                     raise RuntimeError("Invalid policy")
             else:

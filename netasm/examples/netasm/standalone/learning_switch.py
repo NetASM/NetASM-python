@@ -251,8 +251,14 @@ def main():
 if __name__ == "__main__":
     policy = main()
 
-    # Execute
+    # Cost
     if True:
+        from netasm.netasm import cost
+        area, latency = cost.cost_Policy(policy)
+        print area, latency
+
+    # Execute
+    if False:
         from netasm.netasm import execute
 
         policy = execute.Execute(policy)
