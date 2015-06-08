@@ -59,7 +59,7 @@ import pox.lib.pxpcap as pxpcap
 import pox.openflow.libopenflow_01 as of
 from netasm.netasm.core.syntax import *
 from netasm.netasm.core.common import bitmap_to_ports, ports_to_bitmap
-from netasm.netasm import validate, execute
+from netasm.netasm import validate, execute, optimize, cost
 
 
 class OpenFlowWorker(BackoffWorker):
@@ -220,6 +220,23 @@ def _do_ctl2(event):
             if switch.policy:
                 t_id = TableId(t_name)
                 switch.policy.del_table_entry(switch.policy.tables, t_id, t_index)
+        elif event.first == "query-table-entry":
+            ra(3)
+            switch = _switches[event.args[0]]
+            t_name = event.args[1]
+            t_index = literal_eval(event.args[2])
+
+            if switch.policy:
+                t_id = TableId(t_name)
+                t_entry = switch.policy.query_table_entry(t_id, t_index)
+                return str(t_entry)
+        elif event.first == "query-table-list":
+            ra(1)
+            switch = _switches[event.args[0]]
+
+            if switch.policy:
+                t_list = switch.policy.query_table_list()
+                return str(t_list)
         elif event.first == "show":
             ra(0)
             s = []
@@ -424,6 +441,13 @@ class ProgSwitch(ExpireMixin, SoftwareSwitchBase):
                     try:
                         validate.type_check.type_check_Policy__time_usage(policy, _MAX_PORTS)
                         print "Policy (type check): passed!"
+
+                        area, latency = cost.cost_Policy__time_usage(policy)
+                        print "Original policy (cost): Area=%s, Latency=%s" % (area, latency)
+
+                        policy = optimize.optimize_Policy(policy)
+                        area, latency = cost.cost_Policy__time_usage(policy)
+                        print "Optimized policy (cost): Area=%s, Latency=%s" % (area, latency)
 
                         self.policy = execute.Execute(policy)
                         self.policy.start()
