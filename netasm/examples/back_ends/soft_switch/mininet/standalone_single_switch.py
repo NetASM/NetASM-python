@@ -53,7 +53,7 @@ def test():
     for switch in net.switches:
         switch.policy = 'netasm.examples.netasm.standalone.hub'
 
-    NetASMSwitch.start_datapath(net.switches, address="127.0.0.1", port=6633, standalone=False)
+    NetASMSwitch.start_datapath(net.switches, address="127.0.0.1", port=6633, standalone=True)
     net.start()
 
     net.pingAll()
