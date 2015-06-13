@@ -98,7 +98,7 @@ class OpenFlowWorker(BackoffWorker):
         self.log.debug(*args, **kw)
 
 
-def do_launch(cls, address='127.0.0.1', port=6633, max_retry_delay=16,
+def do_launch(cls, standalone, address='127.0.0.1', port=6633, max_retry_delay=16,
               dpid=None, extra_args=None, **kw):
     """
     Used for implementing custom switch launching functions
@@ -146,7 +146,8 @@ def do_launch(cls, address='127.0.0.1', port=6633, max_retry_delay=16,
 
     from pox.core import core
 
-    core.addListenerByName("UpEvent", up)
+    if not standalone:
+        core.addListenerByName("UpEvent", up)
 
     return switch
 
@@ -158,6 +159,49 @@ DEFAULT_CTL_PORT = 7791
 _switches = {}
 
 _MAX_PORTS = 64
+
+
+def load_policy(switch, module_name):
+    if switch.policy:
+        switch.policy.stop()
+    switch.policy = None
+
+    try:
+        if module_name in sys.modules:
+            del sys.modules[module_name]
+        module = import_module(module_name)
+    except ImportError, e:
+        raise RuntimeError('Must be a valid python module\n' +
+                           'e.g, full module name,\n' +
+                           '     no .py suffix,\n' +
+                           '     located on the system PYTHONPATH\n' +
+                           '\n' +
+                           'Exception message for ImportError was:' + e.message)
+    main = module.main
+
+    if main:
+        policy = main()
+        if isinstance(policy, Policy):
+            try:
+                validate.type_check.type_check_Policy(policy, _MAX_PORTS)
+                print "Policy [%s] (type check): passed!" % module_name
+            except Exception, e:
+                print "Policy [%s] (type check): failed... " % module_name + e.message
+                switch.policy = None
+
+            area, latency = cost.cost_Policy(policy)
+            print "policy [%s] (original cost): Area=%s, Latency=%s" % (module_name, area, latency)
+
+            policy = optimize.optimize_Policy(policy)
+            area, latency = cost.cost_Policy(policy)
+            print "Policy [%s] (optimize cost): Area=%s, Latency=%s" % (module_name, area, latency)
+
+            switch.policy = execute.Execute(policy)
+            switch.policy.start()
+        else:
+            raise RuntimeError("Invalid policy: %s" % (module_name, ))
+    else:
+        raise RuntimeError("Invalid policy: %s" % (module_name, ))
 
 
 def _do_ctl(event):
@@ -201,6 +245,19 @@ def _do_ctl2(event):
                 raise RuntimeError("No such interface")
             switch = _switches[event.args[0]]
             switch.remove_interface(event.args[1])
+        elif event.first == 'set-policy':
+            ra(2)
+            switch = _switches[event.args[0]]
+            module_name = event.args[1]
+
+            load_policy(switch, module_name)
+        elif event.first == 'clr-policy':
+            ra(1)
+            switch = _switches[event.args[0]]
+
+            if switch.policy:
+                switch.policy.stop()
+            switch.policy = None
         elif event.first == "add-table-entry":
             ra(4)
             switch = _switches[event.args[0]]
@@ -254,8 +311,8 @@ def _do_ctl2(event):
         return "Error: " + str(e)
 
 
-def launch(address='127.0.0.1', port=6633, max_retry_delay=16,
-           dpid=None, ports='', extra=None, ctl_port=None,
+def launch(standalone=False, address='127.0.0.1', port=6633, max_retry_delay=16,
+           dpid=None, ports='', policy='', extra=None, ctl_port=None,
            __INSTANCE__=None):
     """
     Launches a switch
@@ -281,8 +338,8 @@ def launch(address='127.0.0.1', port=6633, max_retry_delay=16,
     def up(event):
         ports = [p for p in _ports.split(",") if p]
 
-        switch = do_launch(ProgSwitch, address, port, max_retry_delay, dpid,
-                           ports=ports, extra_args=extra)
+        switch = do_launch(ProgSwitch, standalone, address, port, max_retry_delay, dpid,
+                           ports=ports, policy=policy, extra_args=extra)
         _switches[switch.name] = switch
 
     core.addListenerByName("UpEvent", up)
@@ -301,7 +358,6 @@ class ProgSwitch(ExpireMixin, SoftwareSwitchBase):
         ports is a list of interface names
         """
         log_level = kw.pop('log_level', self.default_log_level)
-
         self.policy = None
         self.rx_q = Queue()
         self.consumer_thread = Thread(target=self._consumer_threadproc)
@@ -311,6 +367,10 @@ class ProgSwitch(ExpireMixin, SoftwareSwitchBase):
 
         ports = kw.pop('ports', [])
         kw['ports'] = []
+
+        module_name = kw.pop("policy", None)
+        if module_name:
+            load_policy(self, module_name)
 
         super(ProgSwitch, self).__init__(**kw)
 
@@ -418,46 +478,7 @@ class ProgSwitch(ExpireMixin, SoftwareSwitchBase):
         if message['operation'] == 'set-policy':
             module_name = message['data']
 
-            if self.policy:
-                self.policy.stop()
-            self.policy = None
-
-            try:
-                if module_name in sys.modules:
-                    del sys.modules[module_name]
-                module = import_module(module_name)
-            except ImportError, e:
-                raise RuntimeError('Must be a valid python module\n' +
-                                   'e.g, full module name,\n' +
-                                   '     no .py suffix,\n' +
-                                   '     located on the system PYTHONPATH\n' +
-                                   '\n' +
-                                   'Exception message for ImportError was:' + e.message)
-            main = module.main
-
-            if main:
-                policy = main()
-                if isinstance(policy, Policy):
-                    try:
-                        validate.type_check.type_check_Policy(policy, _MAX_PORTS)
-                        print "Policy (type check): passed!"
-                    except Exception, e:
-                        print "Policy (type check): failed... " + e.message
-                        self.policy = None
-
-                    area, latency = cost.cost_Policy(policy)
-                    print "policy (original cost): Area=%s, Latency=%s" % (area, latency)
-
-                    policy = optimize.optimize_Policy(policy)
-                    area, latency = cost.cost_Policy(policy)
-                    print "Policy (optimize cost): Area=%s, Latency=%s" % (area, latency)
-
-                    self.policy = execute.Execute(policy)
-                    self.policy.start()
-                else:
-                    raise RuntimeError("Invalid policy")
-            else:
-                raise RuntimeError("Invalid policy")
+            load_policy(self, module_name)
         elif message['operation'] == 'clr-policy':
             if self.policy:
                 self.policy.stop()
