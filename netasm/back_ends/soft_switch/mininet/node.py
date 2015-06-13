@@ -48,6 +48,7 @@ class NetASMSwitch(Switch):
 
     def __init__(self, name, **kwargs):
         Switch.__init__(self, name, **kwargs)
+        self.policy = ''
 
         # ''' Check if 'pcap_switch' is running '''
         # try:
@@ -65,11 +66,12 @@ class NetASMSwitch(Switch):
         pass
 
     # def set_policy(self, policy):
-    # if NetASMSwitch.CTL_ENABLE:
+    #     if NetASMSwitch.CTL_ENABLE:
     #         command = \
     #             ['python', path + '/pox.py', '--no-openflow', 'datapaths.ctl',
     #              '--cmd="set-policy ' + self.dpid + ' ' + policy + '"',
     #              '--address=' + NetASMSwitch.CTL_ADDRESS, '--port=' + str(NetASMSwitch.CTL_PORT)]
+    #         print ' '.join(command)
     #         run_command(command)
     #     else:
     #         error("*** error: netasm switch(s) is not running at " + NetASMSwitch.CTL_ADDRESS + "::" + str(
@@ -114,14 +116,17 @@ class NetASMSwitch(Switch):
             exit(1)
 
     @staticmethod
-    def start_datapath(switches, address="127.0.0.1", port=6633):
+    def start_datapath(switches, address="127.0.0.1", port=6633, standalone=True):
         global _process
 
         args = []
         for switch in switches:
             args += ['netasm.back_ends.soft_switch.datapath'] + \
+                    (['--standalone'] if standalone else []) + \
                     ['--address=' + address] + ['--port=' + str(port)] + \
                     ['--dpid=' + switch.dpid]
+
+            args += ['--policy=' + switch.policy]
 
             intfs = ''
             for intf in switch.intfList():
@@ -135,7 +140,7 @@ class NetASMSwitch(Switch):
         if args:
             command = ['python', path + '/pox.py', '--no-openflow'] + args + \
                       ['--ctl_port=' + str(NetASMSwitch.CTL_PORT)]
-            print 'Run this in a separate terminal:\n' + ' '.join(command)
+            raw_input("*** Run this command in a separate terminal then press Enter!\n" + 'sudopy ' + ' '.join(command))
             # _process = run_command(command)
             NetASMSwitch.CTL_ENABLE = True
         else:

@@ -161,15 +161,16 @@ _switches = {}
 _MAX_PORTS = 64
 
 
-def load_policy(switch, module_name):
+def load_policy(switch, policy_name):
     if switch.policy:
         switch.policy.stop()
+    switch.policy_name = ''
     switch.policy = None
 
     try:
-        if module_name in sys.modules:
-            del sys.modules[module_name]
-        module = import_module(module_name)
+        if policy_name in sys.modules:
+            del sys.modules[policy_name]
+        module = import_module(policy_name)
     except ImportError, e:
         raise RuntimeError('Must be a valid python module\n' +
                            'e.g, full module name,\n' +
@@ -184,24 +185,26 @@ def load_policy(switch, module_name):
         if isinstance(policy, Policy):
             try:
                 validate.type_check.type_check_Policy(policy, _MAX_PORTS)
-                print "Policy [%s] (type check): passed!" % module_name
+                print "Policy [%s] (type check): passed!" % policy_name
             except Exception, e:
-                print "Policy [%s] (type check): failed... " % module_name + e.message
+                print "Policy [%s] (type check): failed... " % policy_name + e.message
+                switch.policy_name = ''
                 switch.policy = None
 
             area, latency = cost.cost_Policy(policy)
-            print "policy [%s] (original cost): Area=%s, Latency=%s" % (module_name, area, latency)
+            print "policy [%s] (original cost): Area=%s, Latency=%s" % (policy_name, area, latency)
 
             policy = optimize.optimize_Policy(policy)
             area, latency = cost.cost_Policy(policy)
-            print "Policy [%s] (optimize cost): Area=%s, Latency=%s" % (module_name, area, latency)
+            print "Policy [%s] (optimize cost): Area=%s, Latency=%s" % (policy_name, area, latency)
 
+            switch.policy_name = policy_name
             switch.policy = execute.Execute(policy)
             switch.policy.start()
         else:
-            raise RuntimeError("Invalid policy: %s" % (module_name, ))
+            raise RuntimeError("Invalid policy: %s" % (policy_name, ))
     else:
-        raise RuntimeError("Invalid policy: %s" % (module_name, ))
+        raise RuntimeError("Invalid policy: %s" % (policy_name, ))
 
 
 def _do_ctl(event):
@@ -248,15 +251,16 @@ def _do_ctl2(event):
         elif event.first == 'set-policy':
             ra(2)
             switch = _switches[event.args[0]]
-            module_name = event.args[1]
+            policy_name = event.args[1]
 
-            load_policy(switch, module_name)
+            load_policy(switch, policy_name)
         elif event.first == 'clr-policy':
             ra(1)
             switch = _switches[event.args[0]]
 
             if switch.policy:
                 switch.policy.stop()
+            switch.policy_name = ''
             switch.policy = None
         elif event.first == "add-table-entry":
             ra(4)
@@ -298,7 +302,7 @@ def _do_ctl2(event):
             ra(0)
             s = []
             for switch in _switches.values():
-                s.append("Switch %s" % (switch.name,))
+                s.append("Switch %s (%s)" % (switch.name, switch.policy_name))
                 for no, p in switch.ports.iteritems():
                     s.append(" %3s %s" % (no, p.name))
             return "\n".join(s)
@@ -368,9 +372,9 @@ class ProgSwitch(ExpireMixin, SoftwareSwitchBase):
         ports = kw.pop('ports', [])
         kw['ports'] = []
 
-        module_name = kw.pop("policy", None)
-        if module_name:
-            load_policy(self, module_name)
+        self.policy_name = kw.pop("policy", '')
+        if self.policy_name:
+            load_policy(self, self.policy_name)
 
         super(ProgSwitch, self).__init__(**kw)
 
@@ -476,9 +480,9 @@ class ProgSwitch(ExpireMixin, SoftwareSwitchBase):
 
     def _handle_out_message(self, message, connection):
         if message['operation'] == 'set-policy':
-            module_name = message['data']
+            policy_name = message['data']
 
-            load_policy(self, module_name)
+            load_policy(self, policy_name)
         elif message['operation'] == 'clr-policy':
             if self.policy:
                 self.policy.stop()
