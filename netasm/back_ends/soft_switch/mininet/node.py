@@ -116,7 +116,7 @@ class NetASMSwitch(Switch):
             exit(1)
 
     @staticmethod
-    def start_datapath(switches, address="127.0.0.1", port=6633, standalone=True):
+    def start_datapath(switches, address="127.0.0.1", port=6633, standalone=False):
         global _process
 
         args = []

@@ -45,9 +45,9 @@ def _handle_VendorIn(event):
     in_msg = InMessage(event.ofp)
 
     if in_msg.is_query_table_entry:
-        print in_msg.table_name, in_msg.table_index, in_msg.table_entry
+        print "Query Table Entry: %s %s %s" % (in_msg.table_name, in_msg.table_index, in_msg.table_entry)
     elif in_msg.is_query_table_list:
-        print in_msg.table_list
+        print "Query Table List: %s" % (in_msg.table_list, )
 
 
 def _handle_ConnectionUp(event):
