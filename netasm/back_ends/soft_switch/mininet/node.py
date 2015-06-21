@@ -50,70 +50,11 @@ class NetASMSwitch(Switch):
         Switch.__init__(self, name, **kwargs)
         self.policy = ''
 
-        # ''' Check if 'pcap_switch' is running '''
-        # try:
-        # subprocess.check_output('netstat -lnp | grep ' + str(NetASMSwitch.CTL_PORT), shell=True).strip()
-        # except:
-        # error(
-        # "*** error: 'prog_switch' is not running at " + NetASMSwitch.CTL_ADDRESS + "::" + str(
-        #             NetASMSwitch.CTL_PORT) + "\n")
-        #     exit(1)
-
     def start(self, controllers):
         pass
 
     def stop(self):
         pass
-
-    # def set_policy(self, policy):
-    #     if NetASMSwitch.CTL_ENABLE:
-    #         command = \
-    #             ['python', path + '/pox.py', '--no-openflow', 'datapaths.ctl',
-    #              '--cmd="set-policy ' + self.dpid + ' ' + policy + '"',
-    #              '--address=' + NetASMSwitch.CTL_ADDRESS, '--port=' + str(NetASMSwitch.CTL_PORT)]
-    #         print ' '.join(command)
-    #         run_command(command)
-    #     else:
-    #         error("*** error: netasm switch(s) is not running at " + NetASMSwitch.CTL_ADDRESS + "::" + str(
-    #             NetASMSwitch.CTL_PORT) + "\n")
-    #         exit(1)
-    #
-    # def clear_policy(self):
-    #     if NetASMSwitch.CTL_ENABLE:
-    #         command = \
-    #             ['python', path + '/pox.py', '--no-openflow', 'datapaths.ctl',
-    #              '--cmd="clr-policy ' + self.dpid + '"',
-    #              '--address=' + NetASMSwitch.CTL_ADDRESS, '--port=' + str(NetASMSwitch.CTL_PORT)]
-    #         run_command(command)
-    #     else:
-    #         error("*** error: netasm switch(s) is not running at " + NetASMSwitch.CTL_ADDRESS + "::" + str(
-    #             NetASMSwitch.CTL_PORT) + "\n")
-    #         exit(1)
-
-    def add_table_entry(self, name, index, entry):
-        if NetASMSwitch.CTL_ENABLE:
-            command = \
-                ['python', path + '/pox.py', '--no-openflow', 'datapaths.ctl',
-                 '--cmd="add-table-entry ' + self.dpid + ' ' + name + ' ' + str(index) + ' '
-                 + str(entry).replace(' ', '') + '"',
-                 '--address=' + NetASMSwitch.CTL_ADDRESS, '--port=' + str(NetASMSwitch.CTL_PORT)]
-            run_command(command)
-        else:
-            error("*** error: netasm switch(s) is not running at " + NetASMSwitch.CTL_ADDRESS + "::" + str(
-                NetASMSwitch.CTL_PORT) + "\n")
-            exit(1)
-
-    def delete_table_entry(self, name, index):
-        if NetASMSwitch.CTL_ENABLE:
-            command = \
-                ['python', path + '/pox.py', '--no-openflow', 'datapaths.ctl',
-                 '--cmd="del-table-entry ' + self.dpid + ' ' + name + ' ' + str(index) + '"',
-                 '--address=' + NetASMSwitch.CTL_ADDRESS, ' --port=' + str(NetASMSwitch.CTL_PORT)]
-            run_command(command)
-        else:
-            error("*** error: netasm switch(s) is not running at " + NetASMSwitch.CTL_ADDRESS + "::" + str(
-                NetASMSwitch.CTL_PORT) + "\n")
-            exit(1)
 
     @staticmethod
     def start_datapath(switches, address="127.0.0.1", port=6633, standalone=False):
