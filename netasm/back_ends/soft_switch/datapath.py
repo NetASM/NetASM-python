@@ -577,7 +577,7 @@ class ProgSwitch(ExpireMixin, SoftwareSwitchBase):
             port = ports_to_bitmap(in_port)
             state.header[Field('inport_bitmap')] = Value(port, Size(_MAX_PORTS))
             state.header[Field('outport_bitmap')] = Value(0, Size(_MAX_PORTS))
-            state.header[Field('bit_length')] = Value(len(state.packet), Size(_MAX_PORTS))
+            state.header[Field('bit_length')] = Value(len(state.packet), Size(32))
             state.header[Field('DRP')] = Value(0, Size(1))
             state.header[Field('CTR')] = Value(0, Size(1))
 
