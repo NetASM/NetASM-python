@@ -11,7 +11,7 @@ if [ $vethpairs -gt 48 ]; then
     exit
 fi
 
-echo "No of veth pairs is vethpairs"
+echo "No of veth pairs is $vethpairs"
 
 idx=0
 
