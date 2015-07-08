@@ -59,7 +59,7 @@ class Lexer:
         'Binary', 'Ternary',
 
         # Table types
-        'CAM', 'RAM', 'HASH',
+        'CAM', 'RAM', 'HASH'
     )
 
     keywords_map = {}
@@ -80,6 +80,9 @@ class Lexer:
         # Assignment
         'EQUAL',
 
+        # Location
+        'LOC',
+
         # Special
         'S_DECLS', 'S_CODE', 'S_FIELDS', 'S_INSTRS'
     )
@@ -95,17 +98,12 @@ class Lexer:
 
     t_EQUAL = r'='
 
+    t_LOC = r':L'
+
     t_S_DECLS = r'\.decls'
     t_S_CODE = r'\.code'
     t_S_FIELDS = r'\.fields'
     t_S_INSTRS = r'\.instrs'
-
-    number = r'[0-9a-fA-F]+'
-
-    @TOKEN(number)
-    def t_NUM(self, t):
-        # t.value = int(t.value)
-        return t
 
     t_BASE = r"'[bBoOdDhH]"
 
@@ -114,6 +112,13 @@ class Lexer:
     @TOKEN(identifier)
     def t_IDN(self, t):
         t.type = self.keywords_map.get(t.value, "IDN")
+        return t
+
+    number = r'[0-9a-fA-F]+'
+
+    @TOKEN(number)
+    def t_NUM(self, t):
+        # t.value = int(t.value)
         return t
 
     t_STR = '\"[^\"]*\"'
@@ -163,9 +168,20 @@ if __name__ == '__main__':
     lexer = Lexer()
     lexer.build()
     lexer.input('''
-.code
-  .instructions
-    HLT
+.code (
+    .fields ()
+    .instrs (
+        ADD reg0 16
+        LD reg0 16'd4
+        LBL "LBL_0"
+        BR reg0 Eq 16'd0 "LBL_HLT"
+        OP reg0 reg0 Sub 16'd1
+        JMP "LBL_0"
+        LBL "LBL_HLT"
+        LD outport_bitmap reg0
+        HLT
+    )
+)
     ''')
 
     while True:

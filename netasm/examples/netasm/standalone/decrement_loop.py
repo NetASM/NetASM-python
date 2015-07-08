@@ -5,7 +5,7 @@ __author__ = 'mshahbaz'
 # ##  https://github.com/NetASM/NetASM-python
 # ##
 # ##  File:
-# ##        hub.py
+# ##        decrement_loop.py
 # ##
 # ##  Project:
 # ##        NetASM: A Network Assembly Language for Programmable Dataplanes

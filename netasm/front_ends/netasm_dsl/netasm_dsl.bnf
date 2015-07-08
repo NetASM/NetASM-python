@@ -74,7 +74,7 @@
 <operands_masks_> ::= <operand_mask_>+
 
 <operand> ::= <operand_>
-          ||= <location>
+          ||= <location> ":L"
 
 <location> ::= <operand_>
 

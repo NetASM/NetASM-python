@@ -33,7 +33,7 @@
 
 .code (
     .fields ()
-    .instrs(
+    .instrs (
         OP outport_bitmap inport_bitmap Xor 16'hFFFF
         HLT
     )

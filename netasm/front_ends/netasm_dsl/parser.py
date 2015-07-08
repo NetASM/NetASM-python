@@ -235,7 +235,7 @@ class Parser:
             p[0] = p[1]
 
     def p_location(self, p):
-        ''' location : operand_
+        ''' location : operand_ LOC
         '''
         p[0] = Location(p[1])
 
@@ -393,7 +393,7 @@ class Parser:
         elif p[1] == 'LD':
             p[0] = InstructionCollection.LD(p[2], p[3])
         elif p[1] == 'ST':
-            p[0] = InstructionCollection.ST(p[2], p[3])
+            p[0] = InstructionCollection.ST(OperandCollection.Location(p[2]), p[3])
         elif p[1] == 'OP':
             p[0] = InstructionCollection.OP(p[2], p[3], p[4], p[5])
         elif p[1] == 'PUSH':
@@ -494,46 +494,17 @@ class Parser:
 if __name__ == '__main__':
     parser = Parser()
     policy, errors_cnt = parser.parse('''
-.decls (
-    acl_match_table =
-        ([(ipv4_src 32 Binary)
-         (ipv4_dst 32 Binary)] 2048 CAM)
-)
 .code (
-    .fields (
-        outport
-        inport
-        bit_length
-    )
+    .fields ()
     .instrs (
-        ADD eth_dst 16'd48
-        ADD eth_src 16'd48
-        ADD eth_type 16'd16
-
-        LD eth_dst 16'h0
-        LD eth_src 16'd48
-        LD eth_type 16'd96
-
-        BR eth_type Eq 16'h0800 "LBL_PARSE_0"
-
-        CTR "PARSER" "UNHANDLED_IP_PAYLOAD"
-
-        CNC (
-            .code (
-                .fields ()
-                .instrs (
-                    LD eth_type 96
-                    HLT
-                )
-            )
-            .code (
-                .fields ()
-                .instrs (
-                    HLT
-                )
-            )
-        )
-
+        ADD reg0 16
+        LD reg0 16'd4
+        LBL "LBL_0"
+        BR reg0 Eq 16'd0 "LBL_HLT"
+        OP reg0 reg0 Sub 16'd1
+        JMP "LBL_0"
+        LBL "LBL_HLT"
+        LD outport_bitmap reg0
         HLT
     )
 )
