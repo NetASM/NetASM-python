@@ -9,7 +9,7 @@ def main():
     op.add_option('--ifile', action="store", dest="ifile")
     op.add_option('--ofile', action="store", dest="ofile")
 
-    op.set_defaults(ofile='./dump')
+    op.set_defaults(ofile='./dumped.out')
     options, args = op.parse_args()
 
     if not options.ifile:

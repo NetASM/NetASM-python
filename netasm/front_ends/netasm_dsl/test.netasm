@@ -1,47 +1,41 @@
 
-
 # Declarations
 .decls (
     acl_match_table =
-        ([(ipv4_src, 32, Binary),
-          (ipv4_dst, 32, Binary)], 2048, CAM)
+        ([(ipv4_src 5'd32 Binary)
+         (ipv4_dst 5'd32 Binary)] 16'd2048 CAM)
 )
 
 # Code
 .code (
     .fields (
-        outport,
-        inport,
+        outport
+        inport
         bit_length
     )
     .instrs (
-        ADD eth_dst, 16'd48;
-        ADD eth_src, 16'd48;
-        ADD eth_type, 16'd16;
+        ADD eth_dst 16'd48
+        ADD eth_src 16'd48
+        ADD eth_type 16'd16
 
-        LD eth_dst, 16'h0;
-        LD eth_src, 16'd48;
-        LD eth_type, 16'd96;
+        LD eth_dst 16'h0
+        LD eth_src 16'd48
+        LD eth_type 16'd96
 
-        BR eth_type, Eq, 16'h0800, "LBL_PARSE_0";
+        BR eth_type Eq 16'h0800 "LBL_PARSE_0"
 
-        CTR "PARSER":"UNHANDLED_IP_PAYLOAD";
+        CTR "PARSER" "UNHANDLED_IP_PAYLOAD"
 
         CNC (
             .code (
                 .fields ()
                 .instrs (
-                    LD eth_type, 96;
-                    HLT
-                )
-            ),
+                    LD eth_type 96
+                    HLT))
             .code (
                 .fields ()
                 .instrs (
-                    HLT
-                )
-            )
-        );
+                    HLT)))
 
         HLT
     )

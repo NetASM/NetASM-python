@@ -44,8 +44,8 @@ class Lexer:
         'LPAREN', 'RPAREN',  # ()
         'LBRACKET', 'RBRACKET',  # []
 
-        # Assignment, (semi) colon, and coma
-        'EQUAL', 'COLON', 'SEMI', 'COMMA',
+        # Assignment
+        'EQUAL',
 
         # Special
         'S_DECLS', 'S_CODE', 'S_FIELDS', 'S_INSTRS'
@@ -61,9 +61,6 @@ class Lexer:
     t_RBRACKET = r'\]'
 
     t_EQUAL = r'='
-    t_COLON = r':'
-    t_SEMI = r';'
-    t_COMMA = r','
 
     t_S_DECLS = r'\.decls'
     t_S_CODE = r'\.code'

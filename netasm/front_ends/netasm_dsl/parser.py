@@ -69,7 +69,7 @@ class Parser:
     def p_fields(self, p):
         ''' fields : empty
                    | field
-                   | fields COMMA field
+                   | fields field
         '''
         if len(p) == 2:
             if not p[1]:
@@ -77,7 +77,7 @@ class Parser:
             else:
                 p[0] = Fields(p[1])
         else:
-            p[1].append(p[3])
+            p[1].append(p[2])
             p[0] = p[1]
 
     def p_mask(self, p):
@@ -91,9 +91,9 @@ class Parser:
         p[0] = Label(p[1])
 
     def p_reason(self, p):
-        ''' reason : STR COLON STR
+        ''' reason : STR STR
         '''
-        p[0] = Reason(p[1], p[3])
+        p[0] = Reason(p[1], p[2])
 
     def p_operator(self, p):
         ''' operator : Add
@@ -147,13 +147,13 @@ class Parser:
 
     def p_operands__(self, p):
         ''' operands__ : operand__
-                       | operands__ COMMA operand__
+                       | operands__ operand__
         '''
         if len(p) == 2:
             if p[1]:
                 p[0] = OperandCollection.Operands__(p[1])
         else:
-            p[1].append(p[3])
+            p[1].append(p[2])
             p[0] = p[1]
 
     def p_operand_(self, p):
@@ -167,29 +167,29 @@ class Parser:
 
     def p_operands_(self, p):
         ''' operands_ : operand_
-                      | operands_ COMMA operand_
+                      | operands_ operand_
         '''
         if len(p) == 2:
             if p[1]:
                 p[0] = OperandCollection.Operands_(p[1])
         else:
-            p[1].append(p[3])
+            p[1].append(p[2])
             p[0] = p[1]
 
     def p_operand_mask_(self, p):
-        ''' operand_mask_ : LPAREN operand_ COMMA mask RPAREN
+        ''' operand_mask_ : LPAREN operand_ mask RPAREN
         '''
-        p[0] = (p[2], p[4])
+        p[0] = (p[2], p[3])
 
     def p_operands_masks_(self, p):
         ''' operands_masks_ : operand_mask_
-                            | operands_masks_ COMMA operand_mask_
+                            | operands_masks_ operand_mask_
         '''
         if len(p) == 2:
             if p[1]:
                 p[0] = OperandCollection.OperandsMasks_(p[1])
         else:
-            p[1].append(p[3])
+            p[1].append(p[2])
             p[0] = p[1]
 
     def p_operand(self, p):
@@ -221,13 +221,13 @@ class Parser:
             p[0] = MatchTypeCollection.Ternary
 
     def p_match_field(self, p):
-        ''' match_field : LPAREN field COMMA size COMMA match_type RPAREN
+        ''' match_field : LPAREN field size match_type RPAREN
         '''
-        p[0] = p[2], (p[4], p[6])
+        p[0] = p[2], (p[3], p[4])
 
     def p_match_fields(self, p):
         ''' match_fields : match_field
-                         | match_fields COMMA match_field
+                         | match_fields match_field
         '''
         if len(p) == 2:
             if p[1]:
@@ -236,19 +236,19 @@ class Parser:
                 p[0] = TableFieldsCollection.MatchFields()
                 p[0][field] = (size, match_type)
         else:
-            field, (size, match_type) = p[3]
+            field, (size, match_type) = p[2]
 
             p[1][field] = (size, match_type)
             p[0] = p[1]
 
     def p_simple_field(self, p):
-        ''' simple_field : LPAREN field COMMA size RPAREN
+        ''' simple_field : LPAREN field size RPAREN
         '''
-        p[0] = p[2], p[4]
+        p[0] = p[2], p[3]
 
     def p_simple_fields(self, p):
         ''' simple_fields : simple_field
-                          | simple_fields COMMA simple_field
+                          | simple_fields simple_field
         '''
         if len(p) == 2:
             if p[1]:
@@ -257,7 +257,7 @@ class Parser:
                 p[0] = TableFieldsCollection.SimpleFields()
                 p[0][field] = size
         else:
-            field, size = p[3]
+            field, size = p[2]
 
             p[1][field] = size
             p[0] = p[1]
@@ -281,9 +281,9 @@ class Parser:
             p[0] = TableTypeCollection.HSH
 
     def p_table(self, p):
-        ''' table : LPAREN LBRACKET table_fields RBRACKET COMMA size COMMA table_type RPAREN
+        ''' table : LPAREN LBRACKET table_fields RBRACKET size table_type RPAREN
         '''
-        p[0] = Table(p[3], p[6], p[8])
+        p[0] = Table(p[3], p[5], p[6])
 
     def p_table_decl(self, p):
         ''' table_decl : table_id EQUAL table
@@ -293,7 +293,7 @@ class Parser:
     def p_table_decls(self, p):
         ''' table_decls : empty
                         | table_decl
-                        | table_decls SEMI table_decl
+                        | table_decls table_decl
         '''
         if len(p) == 2:
             if not p[1]:
@@ -304,7 +304,7 @@ class Parser:
                 p[0] = TableDecls()
                 p[0][table_id] = table
         else:
-            table_id, table = p[3]
+            table_id, table = p[2]
 
             p[1][table_id] = table
             p[0] = p[1]
@@ -320,22 +320,22 @@ class Parser:
                         | DRP reason
                         | CTR
                         | CTR reason
-                        | ADD operand__ COMMA size
+                        | ADD operand__ size
                         | RMV operand__
-                        | LD operand__ COMMA operand
-                        | ST location COMMA operand_
-                        | OP operand__ COMMA operand_ COMMA operator COMMA operand_
-                        | PUSH location COMMA operand_
-                        | POP operand__ COMMA location
-                        | BR operand_ COMMA comparator COMMA operand_ COMMA label
+                        | LD operand__ operand
+                        | ST location operand_
+                        | OP operand__ operand_ operator operand_
+                        | PUSH location operand_
+                        | POP operand__ location
+                        | BR operand_ comparator operand_ label
                         | JMP label
                         | LBL label
-                        | LDt LBRACKET operands__ RBRACKET COMMA table_id COMMA operand_
-                        | STt table_id COMMA operand_ COMMA LBRACKET operands_masks_ RBRACKET
-                        | INCt table_id COMMA operand_
-                        | LKt operand__ COMMA table_id COMMA LBRACKET operands_ RBRACKET
-                        | CRC operand__ COMMA LBRACKET operands_ RBRACKET
-                        | HSH operand__ COMMA LBRACKET operands_ RBRACKET
+                        | LDt LBRACKET operands__ RBRACKET table_id operand_
+                        | STt table_id operand_ LBRACKET operands_masks_ RBRACKET
+                        | INCt table_id operand_
+                        | LKt operand__ table_id LBRACKET operands_ RBRACKET
+                        | CRC operand__ LBRACKET operands_ RBRACKET
+                        | HSH operand__ LBRACKET operands_ RBRACKET
                         | HLT
                         | CNC LPAREN codes RPAREN
                         | ATM LPAREN code RPAREN
@@ -354,37 +354,37 @@ class Parser:
             else:
                 p[0] = InstructionCollection.DRP(p[2])
         elif p[1] == 'ADD':
-            p[0] = InstructionCollection.ADD(p[2], p[4])
+            p[0] = InstructionCollection.ADD(p[2], p[3])
         elif p[1] == 'RMV':
             p[0] = InstructionCollection.RMV(p[2])
         elif p[1] == 'LD':
-            p[0] = InstructionCollection.LD(p[2], p[4])
+            p[0] = InstructionCollection.LD(p[2], p[3])
         elif p[1] == 'ST':
-            p[0] = InstructionCollection.ST(p[2], p[4])
+            p[0] = InstructionCollection.ST(p[2], p[3])
         elif p[1] == 'OP':
-            p[0] = InstructionCollection.OP(p[2], p[4], p[6], p[8])
+            p[0] = InstructionCollection.OP(p[2], p[3], p[4], p[5])
         elif p[1] == 'PUSH':
-            p[0] = InstructionCollection.PUSH(p[2], p[4])
+            p[0] = InstructionCollection.PUSH(p[2], p[3])
         elif p[1] == 'POP':
-            p[0] = InstructionCollection.POP(p[2], p[4])
+            p[0] = InstructionCollection.POP(p[2], p[3])
         elif p[1] == 'BR':
-            p[0] = InstructionCollection.BR(p[2], p[4], p[6], p[8])
+            p[0] = InstructionCollection.BR(p[2], p[3], p[4], p[5])
         elif p[1] == 'JMP':
             p[0] = InstructionCollection.JMP(p[2])
         elif p[1] == 'LBL':
             p[0] = InstructionCollection.LBL(p[2])
         elif p[1] == 'LDt':
-            p[0] = InstructionCollection.LDt(p[3], p[6], p[8])
+            p[0] = InstructionCollection.LDt(p[3], p[5], p[6])
         elif p[1] == 'STt':
-            p[0] = InstructionCollection.STt(p[2], p[4], p[7])
+            p[0] = InstructionCollection.STt(p[2], p[3], p[5])
         elif p[1] == 'INCt':
-            p[0] = InstructionCollection.INCt(p[2], p[4])
+            p[0] = InstructionCollection.INCt(p[2], p[3])
         elif p[1] == 'LKt':
-            p[0] = InstructionCollection.LKt(p[2], p[4], p[7])
+            p[0] = InstructionCollection.LKt(p[2], p[3], p[5])
         elif p[1] == 'CRC':
-            p[0] = InstructionCollection.CRC(p[2], p[5])
+            p[0] = InstructionCollection.CRC(p[2], p[4])
         elif p[1] == 'HSH':
-            p[0] = InstructionCollection.HSH(p[2], p[5])
+            p[0] = InstructionCollection.HSH(p[2], p[4])
         elif p[1] == 'HLT':
             p[0] = InstructionCollection.HLT()
         elif p[1] == 'CNC':
@@ -399,13 +399,13 @@ class Parser:
 
     def p_instructions(self, p):
         ''' instructions : instruction
-                         | instructions SEMI instruction
+                         | instructions instruction
         '''
         if len(p) == 2:
             if p[1]:
                 p[0] = InstructionCollection.Instructions(p[1])
         else:
-            p[1].append(p[3])
+            p[1].append(p[2])
             p[0] = p[1]
 
     def p_code_fields(self, p):
@@ -429,13 +429,13 @@ class Parser:
 
     def p_codes(self, p):
         ''' codes : code
-                  | codes COMMA code
+                  | codes code
         '''
         if len(p) == 2:
             if p[1]:
                 p[0] = InstructionCollection.Codes(p[1])
         else:
-            p[1].append(p[3])
+            p[1].append(p[2])
             p[0] = p[1]
 
     def p_policy(self, p):
@@ -462,45 +462,47 @@ if __name__ == '__main__':
     parser = Parser()
     policy, errors_cnt = parser.parse('''
 .decls (
-  acl_match_table =
-    ([(ipv4_src, 32, Binary),
-      (ipv4_dst, 32, Binary)], 2048, CAM)
+    acl_match_table =
+        ([(ipv4_src 32 Binary)
+         (ipv4_dst 32 Binary)] 2048 CAM)
 )
 .code (
-  .fields (
-    outport, inport, bit_length
-  )
-  .instrs (
-    ADD eth_dst, 16'd48;
-    ADD eth_src, 16'd48;
-    ADD eth_type, 16'd16;
+    .fields (
+        outport
+        inport
+        bit_length
+    )
+    .instrs (
+        ADD eth_dst 16'd48
+        ADD eth_src 16'd48
+        ADD eth_type 16'd16
 
-    LD eth_dst, 16'h0;
-    LD eth_src, 16'd48;
-    LD eth_type, 16'd96;
+        LD eth_dst 16'h0
+        LD eth_src 16'd48
+        LD eth_type 16'd96
 
-    BR eth_type, Eq, 16'h0800, "LBL_PARSE_0";
+        BR eth_type Eq 16'h0800 "LBL_PARSE_0"
 
-    CTR "PARSER":"UNHANDLED_IP_PAYLOAD";
+        CTR "PARSER" "UNHANDLED_IP_PAYLOAD"
 
-    CNC (
-      .code (
-        .fields ()
-        .instrs (
-          LD eth_type, 96;
-          HLT
+        CNC (
+            .code (
+                .fields ()
+                .instrs (
+                    LD eth_type 96
+                    HLT
+                )
+            )
+            .code (
+                .fields ()
+                .instrs (
+                    HLT
+                )
+            )
         )
-      ),
-      .code (
-        .fields ()
-        .instrs (
-          HLT
-        )
-      )
-    );
 
-    HLT
-  )
+        HLT
+    )
 )
     ''')
 

@@ -15,13 +15,13 @@
 
 <field> ::= <identifier>
 
-<fields> ::= <field>? {"," <field>}
+<fields> ::= <field>*
 
 <mask> ::= <value>
 
 <label> ::= <string>
 
-<reason> ::= <string> ":" <string>
+<reason> ::= <string> <string>
 
 <operator> ::= "Add" | "Sub" | "Mul" | "Div" | "And" | "Or" | "Xor"
 
@@ -29,16 +29,16 @@
 
 <operand__> ::= <field>
 
-<operands__> ::= <operand__> {"," <operand__>}
+<operands__> ::= <operand__>+
 
 <operand_> ::= <operand__>
            ||= <value>
 
-<operands_> ::= <operand_> {"," <operand_>}
+<operands_> ::= <operand_>+
 
-<operand_mask_> ::= "(" <operand_> "," <mask> ")"
+<operand_mask_> ::= "(" <operand_> <mask> ")"
 
-<operands_masks_> ::= <operand_mask_> {"," <operand_mask_>}
+<operands_masks_> ::= <operand_mask_>+
 
 <operand> ::= <operand_>
           ||= <location>
@@ -49,47 +49,47 @@
 
 <match_type> ::= "Binary" | "Ternary"
 
-<match_field> ::= "(" <field> "," <size> "," <match_type> ")"
+<match_field> ::= "(" <field> <size> <match_type> ")"
 
-<simple_field> ::= "(" <field> "," <size> ")"
+<simple_field> ::= "(" <field> <size> ")"
 
-<table_fields> ::= (<match_field> {"," <match_field>} | <simple_field> {"," <simple_field>})
+<table_fields> ::= (<match_field>+ | <simple_field>+)
 
 <table_type> ::= "CAM" | "RAM" | "HASH"
 
-<table> ::= "(" "[" <table_fields> "]" "," <size> "," <table_type> ")"
+<table> ::= "(" "[" <table_fields> "]" <size> <table_type> ")"
 
 <table_decl> ::= <table_id> "=" <table>
 
-<table_decls> ::= <table_decl>? {";" <table_decl>}
+<table_decls> ::= <table_decl>*
 
 <decls> ::= ".decls" "(" <table_decls> ")"
 
 <instruction> ::= "ID"
               ||= "DRP" <reason>?
               ||= "CTR" <reason>?
-              ||= "ADD" <operand__> "," <size>
+              ||= "ADD" <operand__> <size>
               ||= "RMV" <operand__>
-              ||= "LD" <operand__> "," <operand>
-              ||= "ST" <location> "," <operand_>
-              ||= "OP" <operand__> "," <operand_> "," <operator> "," <operand_>
-              ||= "PUSH" <location> "," <operand_>
-              ||= "POP" <operand__> "," <location>
-              ||= "BR" <operand_> "," <comparator> "," <operand_> "," <label>
+              ||= "LD" <operand__> <operand>
+              ||= "ST" <location> <operand_>
+              ||= "OP" <operand__> <operand_> <operator> <operand_>
+              ||= "PUSH" <location> <operand_>
+              ||= "POP" <operand__> <location>
+              ||= "BR" <operand_> <comparator> <operand_> <label>
               ||= "JMP" <label>
               ||= "LBL" <label>
-              ||= "LDt" "[" <operands__> "]" "," <table_id> "," <operand_>
-              ||= "STt" <table_id> "," <operand_> "," "[" <operands_masks_> "]"
-              ||= "INCt" <table_id> "," <operand_>
-              ||= "LKt" <operand__> "," <table_id> "," "[" <operands_> "]"
-              ||= "CRC" <operand__> "," "[" <operands_> "]"
-              ||= "HSH" <operand__> "," "[" <operands_> "]"
+              ||= "LDt" "[" <operands__> "]" <table_id> <operand_>
+              ||= "STt" <table_id> <operand_> "[" <operands_masks_> "]"
+              ||= "INCt" <table_id> <operand_>
+              ||= "LKt" <operand__> <table_id> "[" <operands_> "]"
+              ||= "CRC" <operand__> "[" <operands_> "]"
+              ||= "HSH" <operand__> "[" <operands_> "]"
               ||= "HLT"
               ||= "CNC" "(" <codes> ")"
               ||= "ATM" "(" <code> ")"
               ||= "SEQ" "(" <code> ")"
 
-<instructions> ::= <instruction> {";" <instruction>}
+<instructions> ::= <instruction>+
 
 <code_fields> ::= ".fields" "(" <fields> ")"
 
@@ -97,6 +97,6 @@
 
 <code> ::= ".code" "(" <code_fields>? <code_instructions> ")"
 
-<codes> ::= <code> {"," <code>}
+<codes> ::= <code>+
 
-<policy> :: <decls> <code>
+<policy> :: <decls>? <code>
