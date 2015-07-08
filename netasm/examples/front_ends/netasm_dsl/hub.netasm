@@ -1,9 +1,9 @@
-# ################################################################################
+# ################################################################################-
 # ##
 # ##  https://github.com/NetASM/NetASM-python
 # ##
 # ##  File:
-# ##        dumper.py
+# ##        hub.netasm
 # ##
 # ##  Project:
 # ##        NetASM: A Network Assembly Language for Programmable Dataplanes
@@ -31,36 +31,10 @@
 # ##        License along with the NetASM source package.  If not, see
 # ##        http://www.gnu.org/licenses/.
 
-__author__ = 'shahbaz'
-
-from optparse import OptionParser
-from parser import Parser
-
-
-def main():
-    op = OptionParser()
-    op.add_option('--ifile', action="store", dest="ifile")
-    op.add_option('--ofile', action="store", dest="ofile")
-
-    op.set_defaults(ofile='./dumped.out')
-    options, args = op.parse_args()
-
-    if not options.ifile:
-        print '--ifile flag not specified.'
-        exit(1)
-
-    ifile = open(options.ifile)
-    ofile = open(options.ofile, 'w')
-
-    parser = Parser()
-    policy, errors_cnt = parser.parse(ifile.read())
-
-    ofile.write(str(policy))
-    ofile.write('\n')
-    ofile.write('Total errors: ' + str(errors_cnt))
-
-    ifile.close()
-    ofile.close()
-
-
-main()
+.code (
+    .fields ()
+    .instrs(
+        OP outport_bitmap inport_bitmap Xor 16'hFFFF
+        HLT
+    )
+)

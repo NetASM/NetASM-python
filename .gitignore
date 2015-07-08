@@ -59,3 +59,5 @@ target/
 # Others
 *.idea/
 *.vagrant/
+
+*dumped.out

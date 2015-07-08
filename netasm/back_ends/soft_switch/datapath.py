@@ -2,7 +2,7 @@
 # ##
 # ##  https://github.com/NetASM/NetASM-python
 # ##
-# ##  File:#
+# ##  File:
 # ##        datapath.py
 # ##
 # ##  Project:
@@ -40,9 +40,7 @@ Example:
 ./pox.py --no-openflow datapath --address=localhost
 '''
 
-import sys
 from ast import literal_eval
-from importlib import import_module
 from Queue import Queue
 from threading import Thread
 import logging
@@ -60,6 +58,7 @@ import pox.openflow.libopenflow_01 as of
 from netasm.netasm.core.syntax import *
 from netasm.netasm.core.common import bitmap_to_ports, ports_to_bitmap
 from netasm.netasm import validate, execute, optimize, cost
+from netasm.front_ends.netasm_dsl import parser
 
 
 class OpenFlowWorker(BackoffWorker):
@@ -160,51 +159,48 @@ _switches = {}
 
 _MAX_PORTS = 64
 
+_parser = parser.Parser()
 
-def load_policy(switch, policy_name):
+
+def load_policy(switch, policy_file):
     if switch.policy:
         switch.policy.stop()
-    switch.policy_name = ''
+    switch.policy_file = ''
     switch.policy = None
 
     try:
-        if policy_name in sys.modules:
-            del sys.modules[policy_name]
-        module = import_module(policy_name)
+        fd = open(policy_file)
+        policy, errors_cnt = _parser.parse(fd.read())
+        fd.close()
+
+        if errors_cnt > 0:
+            raise TypeError('%s errors found' % errors_cnt)
     except ImportError, e:
-        raise RuntimeError('Must be a valid python module\n' +
-                           'e.g, full module name,\n' +
-                           '     no .py suffix,\n' +
-                           '     located on the system PYTHONPATH\n' +
-                           '\n' +
-                           'Exception message for ImportError was:' + e.message)
-    main = module.main
+        raise RuntimeError('Must be a valid policy file\n' +
+                           'Exception message was:' + e.message)
 
-    if main:
-        policy = main()
-        if isinstance(policy, Policy):
-            try:
-                validate.type_check.type_check_Policy(policy, _MAX_PORTS)
-                print "Policy [%s] (type check): passed!" % policy_name
-            except Exception, e:
-                print "Policy [%s] (type check): failed... " % policy_name + e.message
-                switch.policy_name = ''
-                switch.policy = None
+    if isinstance(policy, Policy):
+        try:
+            validate.type_check.type_check_Policy(policy, _MAX_PORTS)
+            print "Policy [%s] (type check): passed!" % policy_file
+        except Exception, e:
+            switch.policy_file = ''
+            switch.policy = None
+            raise RuntimeError('Policy [%s] (type check): failed... \n' % policy_file +
+                               'Exception message was:' + e.message)
 
-            area, latency = cost.cost_Policy(policy)
-            print "policy [%s] (original cost): Area=%s, Latency=%s" % (policy_name, area, latency)
+        area, latency = cost.cost_Policy(policy)
+        print "policy [%s] (original cost): Area=%s, Latency=%s" % (policy_file, area, latency)
 
-            policy = optimize.optimize_Policy(policy)
-            area, latency = cost.cost_Policy(policy)
-            print "Policy [%s] (optimize cost): Area=%s, Latency=%s" % (policy_name, area, latency)
+        policy = optimize.optimize_Policy(policy)
+        area, latency = cost.cost_Policy(policy)
+        print "Policy [%s] (optimize cost): Area=%s, Latency=%s" % (policy_file, area, latency)
 
-            switch.policy_name = policy_name
-            switch.policy = execute.Execute(policy)
-            switch.policy.start()
-        else:
-            raise RuntimeError("Invalid policy: %s" % (policy_name, ))
+        switch.policy_file = policy_file
+        switch.policy = execute.Execute(policy)
+        switch.policy.start()
     else:
-        raise RuntimeError("Invalid policy: %s" % (policy_name, ))
+        raise RuntimeError("Invalid policy: %s" % policy_file)
 
 
 def _do_ctl(event):
@@ -251,16 +247,16 @@ def _do_ctl2(event):
         elif event.first == 'set-policy':
             ra(2)
             switch = _switches[event.args[0]]
-            policy_name = event.args[1]
+            policy_file = event.args[1]
 
-            load_policy(switch, policy_name)
+            load_policy(switch, policy_file)
         elif event.first == 'clr-policy':
             ra(1)
             switch = _switches[event.args[0]]
 
             if switch.policy:
                 switch.policy.stop()
-            switch.policy_name = ''
+            switch.policy_file = ''
             switch.policy = None
         elif event.first == "add-table-entry":
             ra(4)
@@ -302,7 +298,7 @@ def _do_ctl2(event):
             ra(0)
             s = []
             for switch in _switches.values():
-                s.append("Switch %s (%s)" % (switch.name, switch.policy_name))
+                s.append("Switch %s (%s)" % (switch.name, switch.policy_file))
                 for no, p in switch.ports.iteritems():
                     s.append(" %3s %s" % (no, p.name))
             return "\n".join(s)
@@ -372,9 +368,9 @@ class ProgSwitch(ExpireMixin, SoftwareSwitchBase):
         ports = kw.pop('ports', [])
         kw['ports'] = []
 
-        self.policy_name = kw.pop("policy", '')
-        if self.policy_name:
-            load_policy(self, self.policy_name)
+        self.policy_file = kw.pop("policy", '')
+        if self.policy_file:
+            load_policy(self, self.policy_file)
 
         super(ProgSwitch, self).__init__(**kw)
 
@@ -480,12 +476,13 @@ class ProgSwitch(ExpireMixin, SoftwareSwitchBase):
 
     def _handle_out_message(self, message, connection):
         if message['operation'] == 'set-policy':
-            policy_name = message['data']
+            policy_file = message['data']
 
-            load_policy(self, policy_name)
+            load_policy(self, policy_file)
         elif message['operation'] == 'clr-policy':
             if self.policy:
                 self.policy.stop()
+            self.policy_file = ''
             self.policy = None
         elif message['operation'] == 'add-table-entry':
             t_name = message['data'][0]

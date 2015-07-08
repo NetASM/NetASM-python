@@ -40,7 +40,7 @@ sudo apt-get update
 sudo apt-get install -y ssh git
  
 sudo apt-get install -y build-essential autoconf automake graphviz libtool vim
-sudo apt-get install -y python-all python-qt4 python-dev python-twisted-conch python-pip python-sphinx
+sudo apt-get install -y python-all python-qt4 python-dev python-twisted-conch python-pip python-sphinx python-ply
 sudo apt-get install -y libpcap-dev
 
 sudo pip install alabaster psutil bitstring
