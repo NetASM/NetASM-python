@@ -557,7 +557,7 @@ class TableDecls(dict):
 
 
 class Decls:
-    def __init__(self, table_decls):
+    def __init__(self, table_decls=TableDecls()):
         if isinstance(table_decls, TableDecls):
             self.table_decls = table_decls
         else:

@@ -1,0 +1,102 @@
+
+(* NetASM Domain-Specific Language *)
+
+<number> ::= [0-9]+
+
+<identifier> ::= [a-zA-Z_][0-9a-zA-Z_]*
+
+<string> = '[^']*'
+
+<base> ::= 'b | 'B | 'o | 'O | 'd | 'D | 'h | 'H
+
+<value> ::= <number>? <base>? <number>
+
+<size> ::= <value>
+
+<field> ::= <identifier>
+
+<fields> ::= <field>? {"," <field>}
+
+<mask> ::= <value>
+
+<label> ::= <string>
+
+<reason> ::= <string> ":" <string>
+
+<operator> ::= "Add" | "Sub" | "Mul" | "Div" | "And" | "Or" | "Xor"
+
+<comparator> ::= "Eq" | "Neq" | "Lt" | "Gt" | "Le" | "Ge"
+
+<operand__> ::= <field>
+
+<operands__> ::= <operand__> {"," <operand__>}
+
+<operand_> ::= <operand__>
+           ||= <value>
+
+<operands_> ::= <operand_> {"," <operand_>}
+
+<operand_mask_> ::= "(" <operand_> "," <mask> ")"
+
+<operands_masks_> ::= <operand_mask_> {"," <operand_mask_>}
+
+<operand> ::= <operand_>
+          ||= <location>
+
+<location> ::= <operand_>
+
+<table_id> ::= <identifier>
+
+<match_type> ::= "Binary" | "Ternary"
+
+<match_field> ::= "(" <field> "," <size> "," <match_type> ")"
+
+<simple_field> ::= "(" <field> "," <size> ")"
+
+<table_fields> ::= (<match_field> {"," <match_field>} | <simple_field> {"," <simple_field>})
+
+<table_type> ::= "CAM" | "RAM" | "HASH"
+
+<table> ::= "(" "[" <table_fields> "]" "," <size> "," <table_type> ")"
+
+<table_decl> ::= <table_id> "=" <table>
+
+<table_decls> ::= <table_decl>? {";" <table_decl>}
+
+<decls> ::= ".decls" "(" <table_decls> ")"
+
+<instruction> ::= "ID"
+              ||= "DRP" <reason>?
+              ||= "CTR" <reason>?
+              ||= "ADD" <operand__> "," <size>
+              ||= "RMV" <operand__>
+              ||= "LD" <operand__> "," <operand>
+              ||= "ST" <location> "," <operand_>
+              ||= "OP" <operand__> "," <operand_> "," <operator> "," <operand_>
+              ||= "PUSH" <location> "," <operand_>
+              ||= "POP" <operand__> "," <location>
+              ||= "BR" <operand_> "," <comparator> "," <operand_> "," <label>
+              ||= "JMP" <label>
+              ||= "LBL" <label>
+              ||= "LDt" "[" <operands__> "]" "," <table_id> "," <operand_>
+              ||= "STt" <table_id> "," <operand_> "," "[" <operands_masks_> "]"
+              ||= "INCt" <table_id> "," <operand_>
+              ||= "LKt" <operand__> "," <table_id> "," "[" <operands_> "]"
+              ||= "CRC" <operand__> "," "[" <operands_> "]"
+              ||= "HSH" <operand__> "," "[" <operands_> "]"
+              ||= "HLT"
+              ||= "CNC" "(" <codes> ")"
+              ||= "ATM" "(" <code> ")"
+              ||= "SEQ" "(" <code> ")"
+
+<instructions> ::= <instruction> {";" <instruction>}
+
+<code_fields> ::= ".fields" "(" <fields> ")"
+
+<code_instructions> ::= ".instructions" "(" <instructions> ")"
+
+<code> ::= ".code" "(" <code_fields>? <code_instructions> ")"
+
+<codes> ::= <code> {"," <code>}
+
+<policy> :: <decls> <code>
