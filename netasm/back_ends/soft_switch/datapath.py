@@ -187,9 +187,11 @@ def load_policy(switch, policy_name):
                 validate.type_check.type_check_Policy(policy, _MAX_PORTS)
                 print "Policy [%s] (type check): passed!" % policy_name
             except Exception, e:
-                print "Policy [%s] (type check): failed... " % policy_name + e.message
                 switch.policy_name = ''
                 switch.policy = None
+                raise RuntimeError('Policy [%s] (type check): failed... \n' % policy_name +
+                           '\n' +
+                           'Exception message was:' + e.message)
 
             area, latency = cost.cost_Policy(policy)
             print "policy [%s] (original cost): Area=%s, Latency=%s" % (policy_name, area, latency)
@@ -459,6 +461,7 @@ class ProgSwitch(ExpireMixin, SoftwareSwitchBase):
     def _handle_GoingDownEvent(self, event):
         if self.policy:
             self.policy.stop()
+        self.policy_name = ''
         self.policy = None
         self.rx_q.put(None)
         self.tx_q.put(None)
@@ -486,6 +489,7 @@ class ProgSwitch(ExpireMixin, SoftwareSwitchBase):
         elif message['operation'] == 'clr-policy':
             if self.policy:
                 self.policy.stop()
+            self.policy_name = ''
             self.policy = None
         elif message['operation'] == 'add-table-entry':
             t_name = message['data'][0]
