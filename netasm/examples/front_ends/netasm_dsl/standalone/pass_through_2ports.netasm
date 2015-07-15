@@ -1,9 +1,9 @@
-# ################################################################################-
+# ################################################################################
 # ##
 # ##  https://github.com/NetASM/NetASM-python
 # ##
 # ##  File:
-# ##        decrement_loop.netasm
+# ##        pass_through_2ports.netasm
 # ##
 # ##  Project:
 # ##        NetASM: A Network Assembly Language for Programmable Dataplanes
@@ -32,18 +32,16 @@
 # ##        http://www.gnu.org/licenses/.
 
 .code (
-    .fields ()
-    .instrs (
-        ADD reg0 4'd16
-        LD reg0 4'd4
-        LBL "LBL_0"
-        BR reg0 Eq 4'd0 "LBL_HLT"
-        OP reg0 reg0 Sub 4'd1
-        JMP "LBL_0"
+    .fields()
+    .instrs(
+        BR inport_bitmap Eq 2'd2 "LBL_1"
+        LD outport_bitmap 2'd2
+        JMP "LBL_HLT"
+
+        LBL "LBL_1"
+        LD outport_bitmap 1'd1
+
         LBL "LBL_HLT"
-        LD outport_bitmap reg0
         HLT
     )
 )
-
-# TODO: This has some issue with type checking

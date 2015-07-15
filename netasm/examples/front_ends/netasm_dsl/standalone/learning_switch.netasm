@@ -1,0 +1,147 @@
+# ################################################################################
+# ##
+# ##  https://github.com/NetASM/NetASM-python
+# ##
+# ##  File:
+# ##        learning_switch.netasm
+# ##
+# ##  Project:
+# ##        NetASM: A Network Assembly Language for Programmable Dataplanes
+# ##
+# ##  Author:
+# ##        Muhammad Shahbaz
+# ##
+# ##  Copyright notice:
+# ##        Copyright (C) 2014 Princeton University
+# ##      Network Operations and Internet Security Lab
+# ##
+# ##  Licence:
+# ##        This file is a part of the NetASM development base package.
+# ##
+# ##        This file is free code: you can redistribute it and/or modify it under
+# ##        the terms of the GNU Lesser General Public License version 2.1 as
+# ##        published by the Free Software Foundation.
+# ##
+# ##        This package is distributed in the hope that it will be useful, but
+# ##        WITHOUT ANY WARRANTY; without even the implied warranty of
+# ##        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# ##        Lesser General Public License for more details.
+# ##
+# ##        You should have received a copy of the GNU Lesser General Public
+# ##        License along with the NetASM source package.  If not, see
+# ##        http://www.gnu.org/licenses/.
+
+# NOTE: We are not considering loop avoidance but we do take into account host migration in this example
+
+.decls (
+    # Ethernet address table
+    eth_match_table = ([(eth_addr 16'd48 Binary)] 16'd16 CAM)
+    eth_params_table = ([(outport_bitmap 16'd3)] 16'd16 RAM)
+
+    # Index table
+    index_table = ([(index 16'd16)] 1'd1 RAM)
+)
+
+.code (
+    .fields ()
+
+    .instrs(
+        ##################
+        ## Parse packet ##
+        ##################
+
+        # Add ethernet header fields
+        ADD eth_dst 16'd48
+        ADD eth_src 16'd48
+        ADD eth_type 16'd16
+
+        # Load fields with default values
+        LD eth_dst 48'd0
+        LD eth_src 48'd0
+        LD eth_type 16'd0
+
+        # Parser packet
+        # load ethernet header fields from the packet
+        LD eth_dst 16'd0::l
+        LD eth_src 16'd48::l
+        LD eth_type 16'd96::l
+
+        ########################
+        ## Lookup MAC address ##
+        ########################
+
+        # Add index field
+        ADD index 16'd16
+
+        ATM (
+            .code (
+                .fields (index eth_dst eth_src)
+                .instrs (
+                    # Lookup in the match table and store the matched index
+                    LKt index eth_match_table [eth_dst]
+                    BR index Neq 16'd-1 "LBL_LKP_0"
+
+                    # Case: there is no match in the match table
+                    # Broadcast the packet
+                    OP outport_bitmap inport_bitmap Xor 16'hFFFF
+                    JMP "LBL_LRN"
+
+                    # Case: there is a match in the l2 match table
+                    LBL "LBL_LKP_0"
+
+                    # Load output port from the parameters table
+                    LDt [outport_bitmap] eth_params_table index
+
+                    #######################
+                    ## Learn MAC address ##
+                    #######################
+                    LBL "LBL_LRN"
+
+                    # Lookup in the match table and store the matched index
+                    LKt index eth_match_table [eth_src]
+                    BR index Neq 16'd-1 "LBL_LRN_0"
+
+                    # Case: there is no match in the match table
+                    # Read the running index from the index table
+                    LDt [index] index_table 1'd0
+
+                    # Store eth_src in the eth_match_table
+                    STt eth_match_table index [(eth_src 48'hFFFFFFFFFFFF)]
+
+                    # Store inport_bitmap in the eth_params_table
+                    STt eth_params_table index [inport_bitmap]
+
+                    # Increment the running index
+                    OP index index Add 16'd1
+
+                    # Check if the index is less than the MAC_TABLE_SIZE
+                    BR index Lt 16'd16 "LBL_LRN_1"
+
+                    # Reset the running index
+                    LD index 16'd0
+
+                    # Store the running index back in the table
+                    LBL "LBL_LRN_1"
+
+                    STt index_table 1'd0 [index]
+                    JMP "LBL_HLT"
+
+                    # Store the current inport_bitmap in the eth_params_table
+                    LBL "LBL_LRN_0"
+
+                    STt eth_params_table index [inport_bitmap]
+
+                    # Halt
+                    LBL "LBL_HLT"
+                    HLT
+                )
+            )
+        )
+
+        ##########
+        ## Halt ##
+        ##########
+        LBL "LBL_HLT"
+        HLT
+    )
+)
