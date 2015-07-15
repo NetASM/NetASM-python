@@ -36,13 +36,18 @@
 
 <number> ::= [0-9]+
 
+<decimal_number> ::= '[dD][-+]?[0-9]+
+
+<hexadecimal_number> ::= '[hH][0-9a-fA-F]+
+
+<value_number> ::= <decimal_number>
+               ||= <hexadecimal_number>
+
+<value> ::= <number> <value_number>
+
 <identifier> ::= [a-zA-Z_][0-9a-zA-Z_]*
 
-<string> = '[^']*'
-
-<base> ::= 'b | 'B | 'o | 'O | 'd | 'D | 'h | 'H
-
-<value> ::= <number>? <base>? <number>
+<string> = "[^"]*"
 
 <size> ::= <value>
 
@@ -56,9 +61,20 @@
 
 <reason> ::= <string> <string>
 
-<operator> ::= "Add" | "Sub" | "Mul" | "Div" | "And" | "Or" | "Xor"
+<operator> ::= "Add"
+           ||= "Sub"
+           ||= "Mul"
+           ||= "Div"
+           ||= "And"
+           ||= "Or"
+           ||= "Xor"
 
-<comparator> ::= "Eq" | "Neq" | "Lt" | "Gt" | "Le" | "Ge"
+<comparator> ::= "Eq"
+             ||= "Neq"
+             ||= "Lt"
+             ||= "Gt"
+             ||= "Le"
+             ||= "Ge"
 
 <operand__> ::= <field>
 
@@ -74,21 +90,25 @@
 <operands_masks_> ::= <operand_mask_>+
 
 <operand> ::= <operand_>
-          ||= <location> ":L"
+          ||= <location> "::"[lL]
 
 <location> ::= <operand_>
 
 <table_id> ::= <identifier>
 
-<match_type> ::= "Binary" | "Ternary"
+<match_type> ::= "Binary"
+             ||= "Ternary"
 
 <match_field> ::= "(" <field> <size> <match_type> ")"
 
 <simple_field> ::= "(" <field> <size> ")"
 
-<table_fields> ::= (<match_field>+ | <simple_field>+)
+<table_fields> ::= (<match_field>+
+               ||= <simple_field>+)
 
-<table_type> ::= "CAM" | "RAM" | "HASH"
+<table_type> ::= "CAM"
+             ||= "RAM"
+             ||= "HASH"
 
 <table> ::= "(" "[" <table_fields> "]" <size> <table_type> ")"
 
@@ -112,7 +132,7 @@
               ||= "JMP" <label>
               ||= "LBL" <label>
               ||= "LDt" "[" <operands__> "]" <table_id> <operand_>
-              ||= "STt" <table_id> <operand_> "[" <operands_masks_> "]"
+              ||= "STt" <table_id> <operand_> "[" (<operands_> | <operands_masks_>) "]"
               ||= "INCt" <table_id> <operand_>
               ||= "LKt" <operand__> <table_id> "[" <operands_> "]"
               ||= "CRC" <operand__> "[" <operands_> "]"

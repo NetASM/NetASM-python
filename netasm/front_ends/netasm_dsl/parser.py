@@ -65,29 +65,22 @@ class Parser:
         '''
         pass
 
-    def get_base(self, x):
-        if x.lower() == "'b":
-            return 2
-        elif x.lower() == "'o":
-            return 8
-        elif x.lower() == "'d":
-            return 10
-        elif x.lower() == "'h":
-            return 16
+    def get_value(self, x):
+        if "'d" in x.lower():
+            return int(x[2:], 10)
+        elif "'h" in x.lower():
+            return int(x[2:], 16)
+
+    def p_value_number(self, p):
+        ''' value_number : DEC
+                         | HEX
+        '''
+        p[0] = p[1]
 
     def p_value(self, p):  # TODO: remove the Size class, it's actually Value class
-        ''' value : NUM BASE NUM
-                  | BASE NUM
-                  | NUM
+        ''' value : NUM value_number
         '''
-        if len(p) == 4:
-            base = self.get_base(p[2])
-            p[0] = Value(int(p[3], base), Size(int(p[1])))
-        elif len(p) == 3:
-            base = self.get_base(p[1])
-            p[0] = Value(int(p[2], base), Size(64))
-        else:
-            p[0] = Value(int(p[1]), Size(64))
+        p[0] = Value(self.get_value(p[2]), Size(int(p[1])))
 
     def p_size(self, p):
         ''' size : value
@@ -364,6 +357,7 @@ class Parser:
                         | JMP label
                         | LBL label
                         | LDt LBRACKET operands__ RBRACKET table_id operand_
+                        | STt table_id operand_ LBRACKET operands_ RBRACKET
                         | STt table_id operand_ LBRACKET operands_masks_ RBRACKET
                         | INCt table_id operand_
                         | LKt operand__ table_id LBRACKET operands_ RBRACKET
@@ -497,11 +491,11 @@ if __name__ == '__main__':
 .code (
     .fields ()
     .instrs (
-        ADD reg0 16
-        LD reg0 16'd4
+        ADD reg0 8'H16
+        LD reg0 16'd4::l
         LBL "LBL_0"
         BR reg0 Eq 16'd0 "LBL_HLT"
-        OP reg0 reg0 Sub 16'd1
+        OP reg0 reg0 Sub 10'd-11
         JMP "LBL_0"
         LBL "LBL_HLT"
         LD outport_bitmap reg0

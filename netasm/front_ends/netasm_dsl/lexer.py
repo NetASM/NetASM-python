@@ -70,8 +70,8 @@ class Lexer:
         # Identifiers and strings
         'IDN', 'STR',
 
-        # Numbers and base
-        'NUM', 'BASE',
+        # Numbers and (Hexa)Decimal
+        'NUM', 'DEC', 'HEX',
 
         # Delimeters
         'LPAREN', 'RPAREN',  # ()
@@ -98,27 +98,22 @@ class Lexer:
 
     t_EQUAL = r'='
 
-    t_LOC = r':L'
+    t_LOC = r'::[lL]'
 
     t_S_DECLS = r'\.decls'
     t_S_CODE = r'\.code'
     t_S_FIELDS = r'\.fields'
     t_S_INSTRS = r'\.instrs'
 
-    t_BASE = r"'[bBoOdDhH]"
+    t_NUM = r'[0-9]+'
+    t_DEC = r"'[dD][-+]?[0-9]+"
+    t_HEX = r"'[hH][0-9a-fA-F]+"
 
     identifier = r'[a-zA-Z_][0-9a-zA-Z_]*'
 
     @TOKEN(identifier)
     def t_IDN(self, t):
         t.type = self.keywords_map.get(t.value, "IDN")
-        return t
-
-    number = r'[0-9a-fA-F]+'
-
-    @TOKEN(number)
-    def t_NUM(self, t):
-        # t.value = int(t.value)
         return t
 
     t_STR = '\"[^\"]*\"'
@@ -172,10 +167,10 @@ if __name__ == '__main__':
     .fields ()
     .instrs (
         ADD reg0 16
-        LD reg0 16'd4
+        LD reg0 16'd-4
         LBL "LBL_0"
         BR reg0 Eq 16'd0 "LBL_HLT"
-        OP reg0 reg0 Sub 16'd1
+        OP reg0 reg0 Sub 'h1
         JMP "LBL_0"
         LBL "LBL_HLT"
         LD outport_bitmap reg0
